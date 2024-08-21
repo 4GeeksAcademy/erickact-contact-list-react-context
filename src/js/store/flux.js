@@ -1,45 +1,72 @@
+import { Navigate } from "react-router";
+
 const getState = ({ getStore, getActions, setStore }) => {
 	return {
 		store: {
-			demo: [
-				{
-					title: "FIRST",
-					background: "white",
-					initial: "white"
-				},
-				{
-					title: "SECOND",
-					background: "white",
-					initial: "white"
-				}
-			]
+			contacts:[],
+			selectedContact: null
 		},
-		actions: {
-			// Use getActions to call a function within a fuction
-			exampleFunction: () => {
-				getActions().changeColor(0, "green");
+		actions: {	
+			getContacts: () => {
+				fetch("https://playground.4geeks.com/contact/agendas/ericka/contacts")
+				.then(response=> response.json())
+				.then(data => setStore({contacts: data.contacts}))
+				.catch(error=>console.log(error))
 			},
-			loadSomeData: () => {
-				/**
-					fetch().then().then(data => setStore({ "foo": data.bar }))
-				*/
+			createContact: (contactData) => {
+					fetch("https://playground.4geeks.com/contact/agendas/ericka/contacts", {
+					
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json"
+					},
+					body: JSON.stringify(contactData)
+				})
+				.then(response=>response.json())
+				// to access the value of the object getStore(.contact), ...(copy the array and add new contact(data))
+				.then(data=> setStore({contacts: [...getStore().contacts, data]}))
+				.catch(error=>console.log(error))
 			},
-			changeColor: (index, color) => {
-				//get the store
-				const store = getStore();
-
-				//we have to loop the entire demo array to look for the respective index
-				//and change its color
-				const demo = store.demo.map((elm, i) => {
-					if (i === index) elm.background = color;
-					return elm;
-				});
-
-				//reset the global store
-				setStore({ demo: demo });
+			deleteContact: (id) => {
+				fetch(`https://playground.4geeks.com/contact/agendas/ericka/contacts/${id}`, {
+					method: "DELETE"
+				})
+				.then(data => {
+					if(data.ok) {
+						const updateContacts = getStore().contacts.filter((contact)=> contact.id !== id)
+						setStore({contacts: updateContacts})
+					} else {
+						console.error("failed to delete contact")
+					}	
+				})
+				.catch(error=>console.log(error))
+			},
+			updateContact: (contactData, id) => {
+				fetch(`https://playground.4geeks.com/contact/agendas/ericka/contacts/${id}`, {
+					method: "PUT",
+					headers: {
+						"Content-Type": "application/json"
+					},
+					body: JSON.stringify(contactData)
+				})
+				.then(response=>response.json())
+				.then(data => {
+					if (data.result === "ok") {
+						const updatedContacts = getStore().contacts.map((contact) =>
+                            contact.id === id ? { ...contact, ...contactData } : contact
+                        );
+                        setStore({ contacts: updatedContacts, selectedContact: null });
+					} else {
+						console.error("failed to update contact")
+					}	
+				})
+				.catch(error=>console.log(error))
+			},
+			editContact: (contactInfo) => {
+				setStore({selectedContact: contactInfo})
 			}
+
 		}
 	};
-};
-
+}
 export default getState;
